@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>WebLease - BSEE Formatting</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <!-- <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet"> -->
+
+</head>
+
+<body>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                {% include "header.html" %}
+                <div class="jumbotron card card-block">
+                    <h2>
+                    WebLease Formatter!
+                </h2>
+                    <p>
+                        WebLease will pull the latest file from data.bsee.gov at the URL below, and reformat it into three columns as shown in the example.
+                    </p>
+                    <p>
+                        URL: {{ input_url }}
+                    </p>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th scope="col">#</th>
+                                <th scope="col">Lease Number</th>
+                                <th scope="col">Primary Owner</th>
+                                <th scope="col">Other Owners</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th scope="row">1</th>
+                                <td>G00001</td>
+                                <td>EmbrOILed, Inc. (75%)</td>
+                                <td>Accomplices (15%), Conspirators, LLC. (10%)</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">2</th>
+                                <td>G00002</td>
+                                <td>Unnaturally Gassy (50%)</td>
+                                <td>Foul Fowl (25%), Smelly Shelly (20%), Stinkin' Lincoln (5%)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p>
+                        Click the "Download Now" button below, to download a formatted CSV file!
+                    <p>
+                        <a class="btn btn-primary btn-large" href="/format">Download Now!</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+    <!-- <script src="{{ url_for('static', filename='js/scripts.js') }}"></script> -->
+</body>
+
+</html>
