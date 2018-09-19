@@ -1,20 +1,39 @@
 from urllib.request import urlopen
-from io import BytesIO
+from io import BytesIO, StringIO
 
-import zipfile
+from bs4 import BeautifulSoup
 
 import csv
+import sys
+import zipfile
 
 from math import ceil
 
 FILE_URL = u'https://www.data.bsee.gov/Leasing/Files/LeaseOwnerRawData.zip'
 FILE_NAME = u'LeaseOwnerRawData/mv_lease_owners_main.txt'
 
+
+class WebLeaseException(Exception):
+    pass
+
 def get_csv(url: str, file: str) -> list:
     with urlopen(url = url) as web_file:
-        byte_response = BytesIO(web_file.read())
+        if web_file.status == 200:
+            byte_response = BytesIO(web_file.read())
 
-    delim_file = zipfile.ZipFile(file = byte_response).open(name = file).read()
+        else:
+            raise WebLeaseException(u'Error downloading file. Please check the URL or try again later.')
+    try:
+        delim_file = zipfile.ZipFile(file = byte_response).open(name = file).read()
+
+    except FileNotFoundError:
+        raise WebLeaseException(u'The URL does not lead to a file')
+
+    except zipfile.BadZipfile:
+        raise WebLeaseException(u'The URL does not lead to a valid zip file')
+
+    except KeyError:
+        raise WebLeaseException(u'The URL does not lead to a valid zip file')
 
     return csv.DictReader(f = delim_file.decode().split(u'\n'))
 
@@ -144,7 +163,7 @@ def format_string(owner_data: dict) -> str:
         percentage = ceil(owner_data[u'percentage']))
 
 
-def get_leases(owners_url: str, owners_file_name: str, save_as: str, aliquot: bool) -> None:
+def get_leases(owners_url: str, owners_file_name: str, aliquot: bool) -> None:
     """
     This is the main function doing everything. It opens both files with data, and iterates
     through each row to figure out who the various owners/operators are, and what percentage
@@ -153,18 +172,16 @@ def get_leases(owners_url: str, owners_file_name: str, save_as: str, aliquot: bo
 
     lease_owners = list(get_csv(owners_url, owners_file_name))
 
-    output_csv = csv.writer(open(save_as, 'w'), dialect=u'excel')
-    output_csv.writerow([u'Lease Number', u'Primary Owner', u'Other Owners'])
+    print(len(lease_owners))
+
+    # if len(lease_owners) == 1
 
     # Check to see whether the user wanted to look at the files by including the ALIQUOT code
     if not aliquot:
-        owners_data = load_lease_owner_data_no_aliquot(lease_owners)
+        return load_lease_owner_data_no_aliquot(lease_owners)
 
     else:
-        owners_data = load_lease_owner_data_with_aliquot(lease_owners)
-
-    for entry in owners_data.keys():
-        output_csv.writerow([entry] + format_data(owners_data[entry]))
+        return load_lease_owner_data_with_aliquot(lease_owners)
 
     # return output_csv
 
@@ -202,6 +219,35 @@ def get_leases(owners_url: str, owners_file_name: str, save_as: str, aliquot: bo
 
     # a = get_leases(u'other.csv', save_as = u'output.csv', aliquot = True)
 
-a = get_leases(owners_url = FILE_URL, owners_file_name = FILE_NAME, save_as = u'output.csv', aliquot = True)
+
+def local_csv(data):
+    output_csv = csv.writer(open(u'output.csv', 'w'), dialect=u'excel')
+    output_csv.writerow([u'Lease Number', u'Primary Owner', u'Other Owners'])
+
+    for entry in data.keys():
+        output_csv.writerow([entry] + format_data(data[entry]))
 
 
+def send_file(data):
+    memory_file = StringIO()
+    memory_csv = csv.writer(memory_file, dialect=u'excel')
+    memory_csv.writerow([u'Lease Number', u'Primary Owner', u'Other Owners'])
+
+    for entry in data.keys():
+        memory_csv.writerow([entry] + format_data(data[entry]))
+
+    send = BytesIO()
+    send.write(memory_file.getvalue().encode(u'utf-8'))
+    send.seek(0)
+    memory_file.close()
+
+    return sen
+
+
+def last_update():
+    with urlopen(u'https://www.data.bsee.gov/Main/RawData.aspx') as web_page:
+        data = BeautifulSoup(web_page.read())
+
+    date = data.find(id=u'ContentPlaceHolderBody_ASPxGridView1_DXDataRow19').find_all(u'td')
+
+    return date[2].text

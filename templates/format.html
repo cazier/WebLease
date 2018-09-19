@@ -25,9 +25,11 @@
                     <p>
                         WebLease will pull the latest file from data.bsee.gov at the URL below, and reformat it into three columns as shown in the example.
                     </p>
-                    <p>
-                        URL: {{ input_url }}
-                    </p>
+                    <blockquote class="blockquote">
+                        <p class="mb-0">URL: {{ input_url }}</p>
+                        <footer class="blockquote-footer">Last Updated: {{ last_accessed_date }}</footer>
+                    </blockquote>
+                    <br>
                     <table class="table table-bordered">
                         <thead>
                             <tr>
@@ -55,7 +57,7 @@
                     <p>
                         Click the "Download Now" button below, to download a formatted CSV file!
                     <p>
-                        <a class="btn btn-primary btn-large" href="/format">Download Now!</a>
+                        <a class="btn btn-primary btn-large" href="/download">Download Now!</a>
                     </p>
                 </div>
             </div>
