@@ -241,7 +241,7 @@ def send_file(data):
     send.seek(0)
     memory_file.close()
 
-    return sen
+    return send
 
 
 def last_update():
