@@ -120,10 +120,16 @@ class BSEE_DATA(object):
                 }
 
             try:
-                self.parsed_data[f"{row[u'LEASE_NUMBER']}{row[u'ASGN_STATUS_CODE'] if self.aliquot else u''}"].append(row_data)
+                self.parsed_data[u'{lease}{aliquot}'.format(
+                    lease = row[u'LEASE_NUMBER'], 
+                    aliquot = row[u'ASGN_STATUS_CODE'] if self.aliquot else u'')
+                ].append(row_data)
 
             except KeyError:
-                self.parsed_data[f"{row[u'LEASE_NUMBER']}{row[u'ASGN_STATUS_CODE'] if self.aliquot else u''}"] = [row_data]
+                self.parsed_data[u'{lease}{aliquot}'.format(
+                    lease = row[u'LEASE_NUMBER'], 
+                    aliquot = row[u'ASGN_STATUS_CODE'] if self.aliquot else u'')
+                ] = [row_data]
 
     def format_owner(self, lease: list) -> list:
         """
