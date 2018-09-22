@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 from flask import Flask, render_template, send_file
 app = Flask(__name__)
 
@@ -35,3 +38,7 @@ def download():
         as_attachment=True,
         attachment_filename=u'output.csv',
         mimetype=u'text/csv')
+
+
+if __name__ == '__main__':
+    app.run(host=u'0.0.0.0')

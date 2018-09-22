@@ -1,10 +1,12 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 from urllib.request import urlopen
 from io import BytesIO, StringIO
 
 from bs4 import BeautifulSoup
 
 import csv
-import sys
 import zipfile
 
 from math import ceil
