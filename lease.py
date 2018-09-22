@@ -23,7 +23,7 @@ class BSEE_DATA(object):
 
     def cache(self) -> str:
         try:
-            with open(file = f'storage/{self.file[1]}.time', mode = 'r') as time_file:
+            with open(file = u'storage/{}.time'.format(self.file[1]), mode = 'r') as time_file:
                 local = datetime.strptime(time_file.read(), u'%m/%d/%Y %I:%M:%S %p')
 
             if datetime.now() - local < timedelta(days = 1):
@@ -84,17 +84,17 @@ class BSEE_DATA(object):
         self.save_data_locally()
 
     def get_local_data(self) -> None:
-        with open(file = f'storage/{self.file[1]}', mode = u'rb') as csv_file:
+        with open(file = u'storage/{}'.format(self.file[1]), mode = u'rb') as csv_file:
             self.csv = csv_file.read()
 
     def load_data(self) -> list:
         self.data = list(csv.DictReader(f = self.csv.decode().split(u'\n')))
 
     def save_data_locally(self) -> None:
-        with open(file = f'storage/{self.file[1]}', mode = u'wb') as save_file:
+        with open(file = u'storage/{}'.format(self.file[1]), mode = u'wb') as save_file:
             save_file.write(self.csv)
 
-        with open(file = f'storage/{self.file[1]}.time', mode = u'w') as save_file:
+        with open(file = u'storage/{}.time'.format(self.file[1]), mode = u'w') as save_file:
             save_file.write(self.update)
 
     def parse_data(self) -> None:
