@@ -25,9 +25,19 @@
                     <p>
                         WebLease will pull the latest file from data.bsee.gov at the URL below, and reformat it into three columns as shown in the example.
                     </p>
-                    <blockquote class="blockquote">
-                        <p class="mb-0">URL: {{ input_url }}</p>
-                        <footer class="blockquote-footer">Last Updated: {{ last_accessed_date }}</footer>
+                    <h4 class="text-right">
+                        Lease Owner Data
+                    </h4>
+                    <blockquote class="blockquote text-right">
+                        <!-- <p class="mb-0">URL: {{ owner_url }}</p> -->
+                        <footer class="blockquote-footer">Last Updated: {{ owner_date }}</footer>
+                    </blockquote>
+                    <h4 class="text-right">
+                        Lease Area Block Data
+                    </h4>
+                    <blockquote class="blockquote text-right">
+                        <!-- <p class="mb-0">URL: {{ area_block_url }}</p> -->
+                        <footer class="blockquote-footer">Last Updated: {{ area_block_date }}</footer>
                     </blockquote>
                     <br>
                     <table class="table table-bordered">

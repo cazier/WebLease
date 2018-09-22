@@ -9,245 +9,201 @@ import zipfile
 
 from math import ceil
 
-FILE_URL = u'https://www.data.bsee.gov/Leasing/Files/LeaseOwnerRawData.zip'
-FILE_NAME = u'LeaseOwnerRawData/mv_lease_owners_main.txt'
-
+from datetime import datetime, timedelta
 
 class WebLeaseException(Exception):
     pass
 
-def get_csv(url: str, file: str) -> list:
-    with urlopen(url = url) as web_file:
-        if web_file.status == 200:
-            byte_response = BytesIO(web_file.read())
+
+class BSEE_DATA(object):
+    def __init__(self, url: str, file: str) -> None:
+        self.url = url
+        self.file = file.split(u'/')
+        self.location = None
+
+    def cache(self) -> str:
+        try:
+            with open(file = f'storage/{self.file[1]}.time', mode = 'r') as time_file:
+                local = datetime.strptime(time_file.read(), u'%m/%d/%Y %I:%M:%S %p')
+
+            if datetime.now() - local < timedelta(days = 1):
+                self.location = u'local'
+                self.update = local.strftime(u'%m/%d/%Y %I:%M:%S %p')
+
+
+            else:
+                self.location = u'remote'
+                self.update = self.last_update()
+
+        except FileNotFoundError:
+            self.location = u'remote'
+            self.update = self.last_update()
+
+    def last_update(self) -> str:
+        with urlopen(u'https://www.data.bsee.gov/Main/RawData.aspx') as web_page:
+            data = BeautifulSoup(web_page.read(), features = u'html.parser')
+
+        if self.file[1] == u'mv_lease_owners_main.txt':
+            date = data.find(id=u'ContentPlaceHolderBody_ASPxGridView1_DXDataRow19').find_all(u'td')
+
+        elif self.file[1] == u'mv_lease_area_block.txt':
+            date = data.find(id=u'ContentPlaceHolderBody_ASPxGridView1_DXDataRow17').find_all(u'td')
+
+        return date[2].text
+
+    def get_data(self):
+        if self.location == None:
+            self.cache()
+
+        if self.location == u'local':
+            self.get_local_data()
 
         else:
-            raise WebLeaseException(u'Error downloading file. Please check the URL or try again later.')
-    try:
-        delim_file = zipfile.ZipFile(file = byte_response).open(name = file).read()
+            self.get_remote_data()
 
-    except FileNotFoundError:
-        raise WebLeaseException(u'The URL does not lead to a file')
+    def get_remote_data(self) -> None:
+        with urlopen(url = self.url) as web_file:
+            if web_file.status == 200:
+                zip_archive = BytesIO(web_file.read())
 
-    except zipfile.BadZipfile:
-        raise WebLeaseException(u'The URL does not lead to a valid zip file')
+            else:
+                raise WebLeaseException(u'Error downloading file. Please check the URL or try again later.')
 
-    except KeyError:
-        raise WebLeaseException(u'The URL does not lead to a valid zip file')
-
-    return csv.DictReader(f = delim_file.decode().split(u'\n'))
-
-
-def load_lease_owner_data_no_aliquot(source_data: list) -> dict:
-    """
-    Goes through every row of the lease data, and creates a dictionary of the format:
-
-        {
-            LEASE_1_NUMBER: {
-                COMPANY_1_NAME: PERCENTAGE_OWNERSHIP,
-                COMPANY_2_NAME: PERCENTAGE_OWNERSHIP,
-                COMPANY_3_NAME: PERCENTAGE_OWNERSHIP,
-                ...
-            },
-            LEASE_2_NUMBER: {
-                COMPANY_1_NAME: PERCENTAGE_OWNERSHIP,
-                COMPANY_2_NAME: PERCENTAGE_OWNERSHIP,
-                COMPANY_3_NAME: PERCENTAGE_OWNERSHIP,
-                ...
-            },
-            LEASE_3_NUMBER: {
-                COMPANY_1_NAME: PERCENTAGE_OWNERSHIP,
-                COMPANY_2_NAME: PERCENTAGE_OWNERSHIP,
-                COMPANY_3_NAME: PERCENTAGE_OWNERSHIP,
-                ...
-            },
-            ...
-        }
-    """
-
-    data = dict()
-
-    for row in source_data:
         try:
-            data[row[u'LEASE_NUMBER']].append({
-                u'owner': row[u'BUS_ASC_NAME'],
-                u'percentage': float(row[u'ASSIGNMENT_PCT'])})
+            self.csv = zipfile.ZipFile(file = zip_archive).open(name = u'/'.join(self.file)).read()
+
+        except FileNotFoundError:
+            raise WebLeaseException(u'The URL does not lead to a file')
+
+        except zipfile.BadZipfile:
+            raise WebLeaseException(u'The URL does not lead to a valid zip file')
 
         except KeyError:
-            data[row[u'LEASE_NUMBER']] = [{
-                u'owner': row[u'BUS_ASC_NAME'],
-                u'percentage': float(row[u'ASSIGNMENT_PCT'])}]
+            raise WebLeaseException(u'The URL does not lead to a valid zip file')
 
-    return data
+        self.save_data_locally()
 
+    def get_local_data(self) -> None:
+        with open(file = f'storage/{self.file[1]}', mode = u'rb') as csv_file:
+            self.csv = csv_file.read()
 
-def load_lease_owner_data_with_aliquot(source_data: list) -> dict:
-    """
-    Goes through every row of the lease data, and creates a dictionary of the format:
+    def load_data(self) -> list:
+        self.data = list(csv.DictReader(f = self.csv.decode().split(u'\n')))
 
-       {
-            LEASE_1_NUMBER + ALIQUOT_CODE: {
-                COMPANY_1_NAME: PERCENTAGE_OWNERSHIP,
-                COMPANY_2_NAME: PERCENTAGE_OWNERSHIP,
-                COMPANY_3_NAME: PERCENTAGE_OWNERSHIP,
-                ...
-            },
-            LEASE_2_NUMBER + ALIQUOT_CODE: {
-                COMPANY_1_NAME: PERCENTAGE_OWNERSHIP,
-                COMPANY_2_NAME: PERCENTAGE_OWNERSHIP,
-                COMPANY_3_NAME: PERCENTAGE_OWNERSHIP,
-                ...
-            },
-            LEASE_3_NUMBER + ALIQUOT_CODE: {
-                COMPANY_1_NAME: PERCENTAGE_OWNERSHIP,
-                COMPANY_2_NAME: PERCENTAGE_OWNERSHIP,
-                COMPANY_3_NAME: PERCENTAGE_OWNERSHIP,
-                ...
-            },
-            ...
-        }
-    """
+    def save_data_locally(self) -> None:
+        with open(file = f'storage/{self.file[1]}', mode = u'wb') as save_file:
+            save_file.write(self.csv)
 
-    data = dict()
+        with open(file = f'storage/{self.file[1]}.time', mode = u'w') as save_file:
+            save_file.write(self.update)
 
-    for row in source_data:
-        try:
-            data[u'{lease}{aliquot}'
-            .format(
-                lease = row[u'LEASE_NUMBER'],
-                aliquot = row[u'ASGN_STATUS_CODE']
-                )].append({
+    def parse_data(self) -> None:
+        self.parsed_data = dict()
+
+        for row in self.data:
+            if self.aliquot == None:
+                row_data = [
+                    row[u'AREA_CODE'],
+                    row[u'BLOCK_NUM'],
+                    row[u'LEASE_STATUS_CD'],
+                    row[u'LEASE_EFF_DATE'],
+                    row[u'LEASE_EXPIR_DATE'],
+                    int(row[u'BLK_MAX_WTR_DPTH'])
+                ]
+
+            else:
+                row_data = {
                     u'owner': row[u'BUS_ASC_NAME'],
-                    u'percentage': float(row[u'ASSIGNMENT_PCT'])})
+                    u'percentage': float(row[u'ASSIGNMENT_PCT'])
+                }
 
-        except KeyError:
-            data[u'{lease}{aliquot}'.format(
-                lease = row[u'LEASE_NUMBER'],
-                aliquot = row[u'ASGN_STATUS_CODE'])] = [{
-                    u'owner': row[u'BUS_ASC_NAME'],
-                    u'percentage': float(row[u'ASSIGNMENT_PCT'])}]
+            try:
+                self.parsed_data[f"{row[u'LEASE_NUMBER']}{row[u'ASGN_STATUS_CODE'] if self.aliquot else u''}"].append(row_data)
 
-    return data
+            except KeyError:
+                self.parsed_data[f"{row[u'LEASE_NUMBER']}{row[u'ASGN_STATUS_CODE'] if self.aliquot else u''}"] = [row_data]
 
+    def format_owner(self, lease: list) -> list:
+        """
+        Returns a tuple (kind of like a list...) with the largest owner as [OPERATOR] and the
+        remainder of the owners as [OTHERS] in the format:
 
-def format_data(lease_data: list) -> tuple:
-    """
-    Returns a tuple (kind of like a list...) with the largest owner as [OPERATOR] and the
-    remainder of the owners as [OTHERS] in the format:
+        ([OPERATOR], [LIST_OF_OTHERS])
 
-    ([OPERATOR], [LIST_OF_OTHERS])
+        However, the actual values returned are also made to look pretty, in the format shown
+        in the function "format_string" below.
+        """
+        lease.sort(key = lambda company: company['percentage'], reverse = True)
 
-    However, the actual values returned are also made to look pretty, in the format shown
-    in the function "format_string" below.
-    """
-    lease_data.sort(key = lambda company: company['percentage'], reverse = True)
+        operator = self.format_string(lease.pop(0))
 
-    operator = format_string(lease_data.pop(0))
+        others = u', '.join([self.format_string(company) for company in lease])
 
-    others = u', '.join([format_string(company) for company in lease_data])
+        return [operator, others]
 
-    return [operator, others]
+    def format_string(self, owner_data: dict) -> str:
+        """
+        Creates a "pretty" string in the format:
 
+        Company Name (Percentage Ownership%)
 
-def format_string(owner_data: dict) -> str:
-    """
-    Creates a "pretty" string in the format:
-
-    Company Name (Percentage Ownership%)
-
-    For example:
-        "Edward Cazier Co. (98%)"
-    """
-    return u'{company_name} ({percentage}%)'.format(
-        company_name = owner_data[u'owner'],
-        percentage = ceil(owner_data[u'percentage']))
+        For example:
+            "Edward Cazier Co. (98%)"
+        """
+        return u'{company_name} ({percentage}%)'.format(
+            company_name = owner_data[u'owner'],
+            percentage = ceil(owner_data[u'percentage']))
 
 
-def get_leases(owners_url: str, owners_file_name: str, aliquot: bool) -> None:
-    """
-    This is the main function doing everything. It opens both files with data, and iterates
-    through each row to figure out who the various owners/operators are, and what percentage
-    of the operation they own.
-    """
+    def prepare(self, aliquot: bool = None):
+        self.aliquot = aliquot
 
-    lease_owners = list(get_csv(owners_url, owners_file_name))
+        self.get_data()
+        self.load_data()
+        self.parse_data()
 
-    print(len(lease_owners))
+class WebLeaseWrapper(object):
+    def __init__(self, owner, area_block):
+        self.owner = owner
+        self.area_block = area_block
+        self.header_row = [
+            u'Lease Number',
+            u'Primary Owner',
+            u'Other Owners',
+            u'Area Code',
+            u'Block Number',
+            u'Lease Status Code',
+            u'Lease Effective Date',
+            u'Lease Expiration Date',
+            u'Block Max Water Depth (m)']
 
-    # if len(lease_owners) == 1
+    def prepare_data(self, aliquot):
+        self.owner.prepare(aliquot)
+        self.area_block.prepare()
 
-    # Check to see whether the user wanted to look at the files by including the ALIQUOT code
-    if not aliquot:
-        return load_lease_owner_data_no_aliquot(lease_owners)
+    def prepare_csv_list(self):
+        self.body_rows = list()
 
-    else:
-        return load_lease_owner_data_with_aliquot(lease_owners)
+        for lease in self.owner.parsed_data:
+            owner = self.owner.format_owner(self.owner.parsed_data[lease])
 
-    # return output_csv
-
-
-
-    # # Generate a list of the rows to evaluate. Ignore the title row (Row 1)
-    # lease_rows = range(2, leases_file.max_row)
-
-    # # Iterate thorugh each of the rows listed above.
-    # for lease_row in lease_rows:
-
-    #     # Get the lease number (Format is "G#####")
-    #     lease_number = leases_file.cell(row = lease_row, column = 1).value
-
-    #     # This is just a... check for weirdness if the owners percentages are more than 100%
-    #     if sum([company[u'percentage'] for company in owners_data[lease_number]]) > 101:
-    #         print(f'{lease_number} has some weirdness... Check it out!')
-    #         continue
-
-    #     else:
-    #         # Otherwise, get pretty formatted data for each owner
-    #         operator, others = format_data(owners_data[lease_number])
-
-    #         # Save that pretty data into the correct cells in the document
-    #         leases_file.cell(row = lease_row, column = 8).value = operator
-    #         leases_file.cell(row = lease_row, column = 9).value = others
-
-    # # Save the lease file with all the new information!
-    # leases_file_wb.save(save_as)
-    # all_leases = [entry for entry in open_csv(u'mv_lease_owners_main.csv')][:100]
-
-    # parsed_leases = load_lease_owner_data_with_aliquot(all_leases)
-
-    # pprint(parsed_leases)
-
-    # a = get_leases(u'other.csv', save_as = u'output.csv', aliquot = True)
+            while len(self.area_block.parsed_data[lease]) > 0:
+                self.body_rows.append(
+                    [lease.strip()] + owner + self.area_block.parsed_data[lease].pop(0))
 
 
-def local_csv(data):
-    output_csv = csv.writer(open(u'output.csv', 'w'), dialect=u'excel')
-    output_csv.writerow([u'Lease Number', u'Primary Owner', u'Other Owners'])
+    def send_csv(self):
+        memory_file = StringIO()
+        memory_csv = csv.writer(memory_file, dialect = u'excel')
+        memory_csv.writerow(self.header_row)
 
-    for entry in data.keys():
-        output_csv.writerow([entry] + format_data(data[entry]))
+        for row in self.body_rows:
+            memory_csv.writerow(row)
 
+        send = BytesIO()
+        send.write(memory_file.getvalue().encode(u'UTF-8'))
+        send.seek(0)
 
-def send_file(data):
-    memory_file = StringIO()
-    memory_csv = csv.writer(memory_file, dialect=u'excel')
-    memory_csv.writerow([u'Lease Number', u'Primary Owner', u'Other Owners'])
+        memory_file.close()
 
-    for entry in data.keys():
-        memory_csv.writerow([entry] + format_data(data[entry]))
-
-    send = BytesIO()
-    send.write(memory_file.getvalue().encode(u'utf-8'))
-    send.seek(0)
-    memory_file.close()
-
-    return send
-
-
-def last_update():
-    with urlopen(u'https://www.data.bsee.gov/Main/RawData.aspx') as web_page:
-        data = BeautifulSoup(web_page.read())
-
-    date = data.find(id=u'ContentPlaceHolderBody_ASPxGridView1_DXDataRow19').find_all(u'td')
-
-    return date[2].text
+        return send
