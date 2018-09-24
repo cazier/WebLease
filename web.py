@@ -6,11 +6,11 @@ app = Flask(__name__)
 
 import lease
 
-owner = lease.BSEE_DATA(url=u'https://www.data.bsee.gov/Leasing/Files/LeaseOwnerRawData.zip', file=u'LeaseOwnerRawData/mv_lease_owners_main.txt')
+owner = lease.Owner_Data()
+area_block = lease.LAB_Data()
+lease_data = lease.Lease_Data()
 
-area_block = lease.BSEE_DATA(url=u'https://www.data.bsee.gov/Leasing/Files/LABRawData.zip', file = u'LABRawData/mv_lease_area_block.txt')
-
-w = lease.WebLeaseWrapper(owner, area_block)
+w = lease.WebLeaseWrapper(owner, area_block, lease_data)
 
 @app.route(u'/')
 def home():
@@ -20,16 +20,19 @@ def home():
 def static_page():
     w.owner.cache()
     w.area_block.cache()
+    w.lease_data.cache()
 
     return render_template(u'format.html',
         owner_url = w.owner.url,
         owner_date = w.owner.update,
         area_block_url = w.area_block.url,
-        area_block_date = w.area_block.update)
+        area_block_date = w.area_block.update,
+        lease_data_url = w.lease_data.url,
+        lease_data_date = w.lease_data.update)
 
 @app.route(u'/download')
 def download():
-    w.prepare_data(aliquot = False)
+    w.prepare_data()
     w.prepare_csv_list()
 
     file = w.send_csv()
