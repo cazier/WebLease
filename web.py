@@ -9,8 +9,10 @@ import lease
 owner = lease.Owner_Data()
 area_block = lease.LAB_Data()
 lease_data = lease.Lease_Data()
+companies = lease.CompanyNumberToName()
+lease_operators = lease.LeaseNumberToOperator()
 
-w = lease.WebLeaseWrapper(owner, area_block, lease_data)
+w = lease.WebLeaseWrapper(owner, area_block, lease_data, companies, lease_operators)
 
 @app.route(u'/')
 def home():
@@ -21,6 +23,8 @@ def static_page():
     w.owner.cache()
     w.area_block.cache()
     w.lease_data.cache()
+    w.lease_operators.cache()
+    w.companies.cache()
 
     return render_template(u'format.html',
         owner_url = w.owner.url,
@@ -39,7 +43,7 @@ def download():
 
     return send_file(file,
         as_attachment=True,
-        attachment_filename=u'output.csv',
+        attachment_filename=u'output_{timestamp}.csv'.format(timestamp = lease.datetime.now().strftime(u'%Y%m%d%H%m')),
         mimetype=u'text/csv')
 
 

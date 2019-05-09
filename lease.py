@@ -18,30 +18,33 @@ class WebLeaseException(Exception):
 
 
 class WebLeaseWrapper(object):
-    def __init__(self, owner, area_block, lease_data):
+    def __init__(self, owner, area_block, lease_data, companies, lease_operators):
         self.owner = owner
         self.area_block = area_block
         self.lease_data = lease_data
+        self.companies = companies
+        self.lease_operators = lease_operators
 
         self.header_row = [
             u'Lease Number',
-            u'Aliquot',
             u'Primary Owner',
             u'Other Owners',
-            u'Area Code',
-            u'Block Number',
+            u'BlockNum',
             u'Lease Status Code',
             u'Lease Effective Date',
             u'Block Max Water Depth (m)',
             u'Sale Number',
             u'Primary Term',
             u'Lease Expiration Date',
-            u'Bid Amount']
+            u'Bid Amount',
+            u'Operator']
 
     def prepare_data(self):
         self.owner.prepare()
         self.area_block.prepare()
         self.lease_data.prepare()
+        self.companies.prepare()
+        self.lease_operators.prepare()
 
     def prepare_csv_list(self):
         self.body_rows = list()
@@ -53,10 +56,11 @@ class WebLeaseWrapper(object):
 
             while len(self.area_block.parsed_data[lease]) > 0:
                 self.body_rows.append(
-                    [lease.strip(), aliquot] + \
+                    [lease.strip()] + \
                     owner + \
                     self.area_block.parsed_data[lease].pop(0) + \
-                    self.lease_data.parsed_data[lease])
+                    self.lease_data.parsed_data[lease] + \
+                    [self.companies.parsed_data[self.lease_operators.parsed_data[lease]]])
 
 
     def send_csv(self):
@@ -227,8 +231,7 @@ class LAB_Data(ZIP_DATA):
 
         for row in self.data:
             row_data = [
-                row[u'AREA_CODE'],
-                row[u'BLOCK_NUM'],
+                str(row[u'AREA_CODE']) + str(row[u'BLOCK_NUM']),
                 row[u'LEASE_STATUS_CD'],
                 row[u'LEASE_EFF_DATE'],
                 # row[u'LEASE_EXPIR_DATE'],
@@ -304,6 +307,78 @@ class Owner_Data(ZIP_DATA):
         return u'{company_name} ({percentage}%)'.format(
             company_name = owner_data[u'owner'],
             percentage = ceil(owner_data[u'percentage']))
+
+class CompanyNumberToName(ZIP_DATA):
+    def __init__(self) -> None:
+        super().__init__(
+            url = u'https://www.data.bsee.gov/Company/Files/compallfixed.zip',
+            filepath = u'compallfixed.txt')
+
+        self.update_site = u'https://www.data.bsee.gov/Main/Leasing.aspx'
+        self.update_tag = u'ContentPlaceHolderBody_ASPxGridView1_DXDataRow1'
+        self.update_column = 1
+
+        self.location = None
+        self.delta_days = 7
+
+    def load_data(self) -> None:
+        self.data_file = self.data_file.decode(encoding=u'utf-8', errors=u'ignore').replace(u', \nLLC', u',  LLC')
+        self.data = [{
+            u'num': row[:5].strip(),
+            u'name': row[13:113].strip(),
+            } for row in self.data_file.split(u'\n') if row[213:221] == u'        ']
+
+    def parse_data(self) -> None:
+        self.parsed_data = {
+            entry[u'num']: entry[u'name'] for entry in self.data}
+
+class LeaseNumberToOperator(ZIP_DATA):
+    def __init__(self) -> None:
+        super().__init__(
+            url = u'https://www.data.bsee.gov/Leasing/Files/lseowndfixed.zip',
+            filepath = u'lseowndfixed.txt')
+
+        self.update_site = u'https://www.data.bsee.gov/Main/Leasing.aspx'
+        self.update_tag = u'ContentPlaceHolderBody_ASPxGridView1_DXDataRow3'
+        self.update_column = 1
+
+        self.location = None
+        self.delta_days = 1
+
+    def load_data(self) -> None:
+        self.data_file = self.data_file.decode(encoding=u'utf-8', errors=u'ignore')
+        self.data = [{
+            u'lease': row[:7].strip(),
+            u'operator': row[49:].strip(),
+            u'date': max([self.int_ifelse(row[7:15]), self.int_ifelse(row[41:49])])
+            } for row in self.data_file.split(u'\n')]
+
+    def parse_data(self) -> None:
+        parsed_data = dict()
+
+        for row in self.data:
+            if row[u'lease'] not in parsed_data.keys():
+                parsed_data[row[u'lease']] = {u'operator': self.clean_operator(row[u'operator']), u'date': row[u'date']}
+
+            else:
+                if row[u'date'] > parsed_data[row[u'lease']][u'date']:
+                    parsed_data[row[u'lease']] = {u'operator': self.clean_operator(row[u'operator']), u'date': row[u'date']}
+
+        self.parsed_data = {entry: parsed_data[entry][u'operator'] for entry in parsed_data.keys()}
+
+    def int_ifelse(self, value):
+        if len(value.strip()) == 0:
+            return 0
+
+        else:
+            return int(value)
+
+    def clean_operator(self, value):
+        if len(value.strip()) == 0:
+            return u'NONE'
+
+        else:
+            return value
 
 def int_ifelse(file_value) -> str or int:
     if len(file_value) != 0:
