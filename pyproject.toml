@@ -25,9 +25,9 @@ disable = [
 
 [tool.poetry]
 name = "weblease"
-version = "1.0.0"
+version = "2.0.0"
 description = ""
-authors = ["Your Name <you@example.com>"]
+authors = ["Brendan Cazier <520246+cazier@users.noreply.github.com>"]
 license = "GPL"
 readme = "README.md"
 
