@@ -1,22 +1,31 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import abc
 import csv
+import typing as t
 import zipfile
 from io import BytesIO, StringIO
 from math import ceil
 from datetime import datetime, timedelta
 from urllib.request import urlopen
 
-from bs4 import BeautifulSoup
+from bs4 import Tag, BeautifulSoup
 
 
 class WebLeaseException(Exception):
     pass
 
 
-class WebLeaseWrapper(object):
-    def __init__(self, owner, area_block, lease_data, companies, lease_operators):
+class WebLeaseWrapper:
+    def __init__(
+        self,
+        owner: "OwnerData",
+        area_block: "LabData",
+        lease_data: "LeaseData",
+        companies: "CompanyNumberToName",
+        lease_operators: "LeaseNumberToOperator",
+    ) -> None:
         self.owner = owner
         self.area_block = area_block
         self.lease_data = lease_data
@@ -38,14 +47,14 @@ class WebLeaseWrapper(object):
             "Operator",
         ]
 
-    def prepare_data(self):
+    def prepare_data(self) -> None:
         self.owner.prepare()
         self.area_block.prepare()
         self.lease_data.prepare()
         self.companies.prepare()
         self.lease_operators.prepare()
 
-    def prepare_csv_list(self):
+    def prepare_csv_list(self) -> None:
         self.body_rows = list()
 
         for row in self.owner.parsed_data.keys():
@@ -62,34 +71,36 @@ class WebLeaseWrapper(object):
                     + [self.companies.parsed_data[self.lease_operators.parsed_data[lease]]]
                 )
 
-    def send_csv(self):
-        memory_file = StringIO()
-        memory_csv = csv.writer(memory_file, dialect="excel")
-        memory_csv.writerow(self.header_row)
+    def send_csv(self) -> BytesIO:
+        with StringIO() as memory_file:
+            memory_csv = csv.writer(memory_file, dialect="excel")
+            memory_csv.writerow(self.header_row)
 
-        for row in self.body_rows:
-            memory_csv.writerow(row)
+            for row in self.body_rows:
+                memory_csv.writerow(row)
 
-        send = BytesIO()
-        send.write(memory_file.getvalue().encode("UTF-8"))
-        send.seek(0)
-
-        memory_file.close()
+            send = BytesIO()
+            send.write(memory_file.getvalue().encode("UTF-8"))
+            send.seek(0)
 
         return send
 
 
-class ZIP_DATA(object):
+class ZipData:
+    location: str
+    update_tag: str
+    update_site: str
+    update_column: int
+
     def __init__(self, url: str, filepath: str) -> None:
         self.url = url
         self.filepath = filepath.split("/")
-        self.location = None
 
         self.delta_days = 1
 
-    def cache(self) -> str:
+    def cache(self) -> None:
         try:
-            with open(file="storage/{}.time".format(self.filepath[-1]), mode="r") as time_file:
+            with open(file=f"storage/{self.filepath[-1]}.time", mode="r") as time_file:
                 local = datetime.strptime(time_file.read(), "%m/%d/%Y %I:%M:%S %p")
 
             if datetime.now() - local < timedelta(days=self.delta_days):
@@ -108,11 +119,16 @@ class ZIP_DATA(object):
         with urlopen(self.update_site) as web_page:
             data = BeautifulSoup(web_page.read(), features="html.parser")
 
-        date = data.find(id=self.update_tag).find_all("td")
+        date = data.find(id=self.update_tag)
 
-        return date[self.update_column].text
+        if not isinstance(date, Tag):
+            raise WebLeaseException("Could not find the proper data from WebLease")
 
-    def get_data(self):
+        last_date = date.find_all("td")
+
+        return str(last_date[self.update_column].text)
+
+    def get_data(self) -> None:
         if self.location == None:
             self.cache()
 
@@ -149,26 +165,30 @@ class ZIP_DATA(object):
         self.save_data_locally()
 
     def get_local_data(self) -> None:
-        with open(file="storage/{}".format(self.filepath[-1]), mode="rb") as local_file:
+        with open(file=f"storage/{self.filepath[-1]}", mode="rb") as local_file:
             self.data_file = local_file.read()
 
     def save_data_locally(self) -> None:
-        with open(file="storage/{}".format(self.filepath[-1]), mode="wb") as save_file:
+        with open(file=f"storage/{self.filepath[-1]}", mode="wb") as save_file:
             save_file.write(self.data_file)
 
-        with open(file="storage/{}.time".format(self.filepath[-1]), mode="w") as save_file:
+        with open(file=f"storage/{self.filepath[-1]}.time", mode="w") as save_file:
             save_file.write(self.update)
 
-    def load_data(self) -> list:
+    def load_data(self) -> None:
         self.data = list(csv.DictReader(f=self.data_file.decode().split("\n")))
 
-    def prepare(self):
+    def prepare(self) -> None:
         self.get_data()
         self.load_data()
         self.parse_data()
 
+    @abc.abstractmethod
+    def parse_data(self) -> None:
+        pass
 
-class Lease_Data(ZIP_DATA):
+
+class LeaseData(ZipData):
     def __init__(self) -> None:
         super().__init__(
             url="https://www.data.boem.gov/Leasing/Files/lsetapefixed.zip",
@@ -178,8 +198,6 @@ class Lease_Data(ZIP_DATA):
         self.update_site = "https://www.data.boem.gov/Main/Leasing.aspx"
         self.update_tag = "ContentPlaceHolderBody_ASPxGridView1_DXDataRow4"
         self.update_column = 1
-
-        self.location = None
 
         self.delta_days = 7
 
@@ -202,16 +220,16 @@ class Lease_Data(ZIP_DATA):
         for row in self.data:
             if len(row[4]) != 0:
                 exp_date = datetime.strptime(row[4], "%Y%m%d")
-                exp_date = exp_date.strftime("%m/%d/%Y")
+                output_date = exp_date.strftime("%m/%d/%Y")
 
             else:
                 if len(row[2]) != 0:
                     exp_date = datetime.strptime(row[2], "%Y%m%d") + timedelta(
                         days=365 * int(row[3])
                     )
-                    exp_date = exp_date.strftime("%m/%d/%Y")
+                    output_date = exp_date.strftime("%m/%d/%Y")
                 else:
-                    exp_date = "N/A"
+                    output_date = "N/A"
 
             self.parsed_data[row[0]] = [
                 # u'sale_num':
@@ -219,13 +237,13 @@ class Lease_Data(ZIP_DATA):
                 # u'primary_term':
                 int_ifelse(row[3]),
                 # u'exp_date':
-                exp_date,
+                output_date,
                 # u'bid_amount':
                 float_ifelse(row[5]),
             ]
 
 
-class LAB_Data(ZIP_DATA):
+class LabData(ZipData):
     def __init__(self) -> None:
         super().__init__(
             url="https://www.data.bsee.gov/Leasing/Files/LABRawData.zip",
@@ -236,14 +254,12 @@ class LAB_Data(ZIP_DATA):
         self.update_tag = "ContentPlaceHolderBody_ASPxGridView1_DXDataRow17"
         self.update_column = 2
 
-        self.location = None
-
     def parse_data(self) -> None:
-        self.parsed_data = dict()
+        self.parsed_data: dict[str, list[str, str, str, int]] = dict()
 
         for row in self.data:
             row_data = [
-                str(row["AREA_CODE"]) + str(row["BLOCK_NUM"]),
+                f'{row["AREA_CODE"]}{row["BLOCK_NUM"]}',
                 row["LEASE_STATUS_CD"],
                 row["LEASE_EFF_DATE"],
                 # row[u'LEASE_EXPIR_DATE'],
@@ -251,15 +267,13 @@ class LAB_Data(ZIP_DATA):
             ]
 
             try:
-                self.parsed_data["{lease}".format(lease=row["LEASE_NUMBER"].strip())].append(
-                    row_data
-                )
+                self.parsed_data[f"{row['LEASE_NUMBER'].strip()}"].append(row_data)
 
             except KeyError:
-                self.parsed_data["{lease}".format(lease=row["LEASE_NUMBER"].strip())] = [row_data]
+                self.parsed_data[f"{row['LEASE_NUMBER'].strip()}"] = [row_data]
 
 
-class Owner_Data(ZIP_DATA):
+class OwnerData(ZipData):
     def __init__(self) -> None:
         super().__init__(
             url="https://www.data.bsee.gov/Leasing/Files/LeaseOwnerRawData.zip",
@@ -269,8 +283,6 @@ class Owner_Data(ZIP_DATA):
         self.update_site = "https://www.data.bsee.gov/Main/RawData.aspx"
         self.update_tag = "ContentPlaceHolderBody_ASPxGridView1_DXDataRow19"
         self.update_column = 2
-
-        self.location = None
 
     def parse_data(self) -> None:
         self.parsed_data = dict()
@@ -315,7 +327,7 @@ class Owner_Data(ZIP_DATA):
 
         return [operator, others]
 
-    def format_string(self, owner_data: dict) -> str:
+    def format_string(self, OwnerData: dict) -> str:
         """
         Creates a "pretty" string in the format:
 
@@ -324,12 +336,10 @@ class Owner_Data(ZIP_DATA):
         For example:
             "Edward Cazier Co. (98%)"
         """
-        return "{company_name} ({percentage}%)".format(
-            company_name=owner_data["owner"], percentage=ceil(owner_data["percentage"])
-        )
+        return f"{OwnerData['owner']} ({ceil(OwnerData['percentage'])}%)"
 
 
-class CompanyNumberToName(ZIP_DATA):
+class CompanyNumberToName(ZipData):
     def __init__(self) -> None:
         super().__init__(
             url="https://www.data.bsee.gov/Company/Files/compallfixed.zip",
@@ -340,7 +350,6 @@ class CompanyNumberToName(ZIP_DATA):
         self.update_tag = "ContentPlaceHolderBody_ASPxGridView1_DXDataRow1"
         self.update_column = 1
 
-        self.location = None
         self.delta_days = 7
 
     def load_data(self) -> None:
@@ -360,7 +369,7 @@ class CompanyNumberToName(ZIP_DATA):
         self.parsed_data = {entry["num"]: entry["name"] for entry in self.data}
 
 
-class LeaseNumberToOperator(ZIP_DATA):
+class LeaseNumberToOperator(ZipData):
     def __init__(self) -> None:
         super().__init__(
             url="https://www.data.bsee.gov/Leasing/Files/lseowndfixed.zip",
@@ -371,7 +380,6 @@ class LeaseNumberToOperator(ZIP_DATA):
         self.update_tag = "ContentPlaceHolderBody_ASPxGridView1_DXDataRow3"
         self.update_column = 1
 
-        self.location = None
         self.delta_days = 1
 
     def load_data(self) -> None:
@@ -386,7 +394,7 @@ class LeaseNumberToOperator(ZIP_DATA):
         ]
 
     def parse_data(self) -> None:
-        parsed_data = dict()
+        parsed_data: dict[str, dict[str, str]] = dict()
 
         for row in self.data:
             if row["lease"] not in parsed_data.keys():
@@ -404,14 +412,14 @@ class LeaseNumberToOperator(ZIP_DATA):
 
         self.parsed_data = {entry: parsed_data[entry]["operator"] for entry in parsed_data.keys()}
 
-    def int_ifelse(self, value):
+    def int_ifelse(self, value: str) -> int:
         if len(value.strip()) == 0:
             return 0
 
         else:
             return int(value)
 
-    def clean_operator(self, value):
+    def clean_operator(self, value: str) -> str:
         if len(value.strip()) == 0:
             return "NONE"
 
@@ -419,7 +427,7 @@ class LeaseNumberToOperator(ZIP_DATA):
             return value
 
 
-def int_ifelse(file_value) -> str or int:
+def int_ifelse(file_value: t.Any) -> str | int:
     if len(file_value) != 0:
         return int(file_value)
 
@@ -427,7 +435,7 @@ def int_ifelse(file_value) -> str or int:
         return "N/A"
 
 
-def float_ifelse(file_value) -> str or float:
+def float_ifelse(file_value: t.Any) -> str | float:
     if len(file_value) != 0:
         return float(file_value)
 
@@ -435,9 +443,9 @@ def float_ifelse(file_value) -> str or float:
         return "N/A"
 
 
-def string_ifelse(file_value) -> str:
+def string_ifelse(file_value: t.Any) -> str:
     if len(file_value) != 0:
-        return file_value
+        return str(file_value)
 
     else:
         return "N/A"

@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from flask import Flask, send_file, render_template
+from datetime import datetime
+
+from flask import Flask, Response, send_file, render_template
 
 import lease
 
 app = Flask(__name__)
 
-owner = lease.Owner_Data()
-area_block = lease.LAB_Data()
-lease_data = lease.Lease_Data()
+owner = lease.OwnerData()
+area_block = lease.LabData()
+lease_data = lease.LeaseData()
 companies = lease.CompanyNumberToName()
 lease_operators = lease.LeaseNumberToOperator()
 
@@ -17,12 +19,12 @@ w = lease.WebLeaseWrapper(owner, area_block, lease_data, companies, lease_operat
 
 
 @app.route("/")
-def home():
+def home() -> str:
     return render_template("index.html")
 
 
 @app.route("/format")
-def static_page():
+def static_page() -> str:
     w.owner.cache()
     w.area_block.cache()
     w.lease_data.cache()
@@ -41,7 +43,7 @@ def static_page():
 
 
 @app.route("/download")
-def download():
+def download() -> Response:
     w.prepare_data()
     w.prepare_csv_list()
 
@@ -50,9 +52,7 @@ def download():
     return send_file(
         file,
         as_attachment=True,
-        attachment_filename="output_{timestamp}.csv".format(
-            timestamp=lease.datetime.now().strftime("%Y%m%d%H%m")
-        ),
+        download_name=f"output_{datetime.now().strftime('%Y%m%d%H%m')}.csv",
         mimetype="text/csv",
     )
 

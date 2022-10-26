@@ -36,12 +36,13 @@ python = "^3.10"
 Flask = "^2.2.2"
 beautifulsoup4 = "^4.11.1"
 Jinja2 = "^3.1.2"
-mypy = "^0.982"
-pylint = "^2.15.5"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^2.20.0"
 types-beautifulsoup4 = "^4.11.6"
+mypy = "^0.982"
+pylint = "^2.15.5"
+black = "^22.10.0"
 
 [build-system]
 requires = ["poetry-core"]
