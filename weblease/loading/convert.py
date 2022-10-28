@@ -5,14 +5,10 @@ import numpy as np
 import pandas as pd
 
 
-def csv_to_dict(_input: str, header: t.Optional[list[str]] = None) -> list[dict[str, str]]:
-    if header:
-        df = pd.read_csv(StringIO(_input), header=None, names=header)
+def csv_to_dict(_input: str, rename: t.Optional[dict[str, str]] = None) -> list[dict[str, str]]:
+    df = pd.read_csv(StringIO(_input)).rename(columns=rename).replace({np.nan: None})
 
-    else:
-        df = pd.read_csv(StringIO(_input), header=0)
-
-    return df.replace({np.nan: None}).to_dict(orient="records")  # type: ignore[return-value]
+    return df.to_dict(orient="records")  # type: ignore[return-value]
 
 
 def fwf_to_dict(_input: str, width_keys: list[tuple[str, int]]) -> list[dict[str, str]]:
@@ -21,6 +17,6 @@ def fwf_to_dict(_input: str, width_keys: list[tuple[str, int]]) -> list[dict[str
 
     names, widths = zip(*width_keys)
 
-    return pd.read_fwf(StringIO(_input), widths=widths, names=names, usecols=keep_cols).to_dict(
-        orient="records"
-    )  # type: ignore[return-value]
+    df = pd.read_fwf(StringIO(_input), widths=widths, names=names, usecols=keep_cols)
+
+    return df.to_dict(orient="records")  # type: ignore[return-value]
