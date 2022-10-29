@@ -12,17 +12,20 @@ show_error_codes = true
 show_error_context = true
 strict = true
 
-[tool.pylint.'FORMAT']
+[tool.pylint."FORMAT"]
 max-line-length=100
 good-names="df"
 
-[tool.pylint.'MESSAGES CONTROL']
+[tool.pylint."MESSAGES CONTROL"]
 disable = [
-    'missing-module-docstring',
-    'missing-class-docstring',
-    'missing-function-docstring',
-    'too-few-public-methods'
+    "missing-module-docstring",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "too-few-public-methods"
     ]
+
+[tool.ward]
+path = "tests"
 
 [tool.poetry]
 name = "weblease"
@@ -51,6 +54,7 @@ ipython = "^8.5.0"
 pandas = "^1.5.1"
 types-requests = "^2.28.11.2"
 pandas-stubs = "^1.5.1.221024"
+ward = "^0.66.1b0"
 
 [build-system]
 requires = ["poetry-core"]
