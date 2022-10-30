@@ -10,11 +10,14 @@ import httpx
 if os.getenv("WEBLEASE_MOCK_DOWNLOAD") == "1":
 
     def handler(request: httpx.Request) -> httpx.Response:
-        if (file := pathlib.Path("cache").joinpath(request.url.path.split("/")[-1])).exists():
+        filename = request.url.path.split("/")[-1]
+
+        if (file := pathlib.Path(cache_dir).joinpath(filename)).exists():
             return httpx.Response(200, content=file.read_bytes())
 
-        return httpx.Response(400)
+        return httpx.Response(404)
 
+    cache_dir = os.getenv("WEBLEASE_MOCK_DIRECTORY", "cache")
     client = httpx.Client(transport=httpx.MockTransport(handler))
 
 else:

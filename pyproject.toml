@@ -8,6 +8,12 @@ length_sort = true
 multi_line_output = 3
 include_trailing_comma = true
 
+# Linters and Static Analysis
+[tool.coverage.run]
+omit = [
+    "tests/*"
+]
+
 [tool.mypy]
 show_error_codes = true
 show_error_context = true
@@ -61,6 +67,7 @@ pandas = "^1.5.1"
 pandas-stubs = "^1.5.1.221024"
 ward = "^0.66.1b0"
 respx = "^0.20.0"
+coverage = {extras = ["toml"], version = "^6.5.0"}
 
 [build-system]
 requires = ["poetry-core"]

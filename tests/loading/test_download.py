@@ -30,9 +30,11 @@ def _setup_teardown(path: pathlib.Path = tmpdir) -> pathlib.Path:
 @fixture(scope=Scope.Module)
 def mocking(files_path: pathlib.Path = tmpdir):
     with respx.mock(base_url="https://example.com/") as mock:
-        mock.get("/empty.zip").mock(side_effect=httpx.RequestError)
+        mock.get("empty.zip").mock(
+            side_effect=httpx.HTTPStatusError("404 - Not Found", request=None, response=None)
+        )
 
-        file = mock.get("/not_empty.zip")
+        file = mock.get("not_empty.zip")
         file.return_value = Response(200, content=files_path.joinpath("not_empty.zip").read_bytes())
 
         yield
@@ -62,8 +64,10 @@ def _() -> None:
 
 @test("download: from remote 404", tags=["download"])
 def _(_: respx.MockRouter = mocking) -> None:
-    with raises(httpx.RequestError):
+    with raises(httpx.HTTPStatusError) as exception:
         get("https://example.com/empty.zip")
+
+    assert str(exception.raised) == "404 - Not Found"
 
 
 @test("download: from remote", tags=["download"])
