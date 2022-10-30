@@ -1,13 +1,12 @@
 import pathlib
+import tempfile
 
 from ward import Scope, fixture
 
 
 @fixture(scope=Scope.Global)
-def root() -> pathlib.Path:
-    return pathlib.Path.cwd()
+def tmpdir() -> pathlib.Path:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = pathlib.Path(tempdir)
 
-
-@fixture(scope=Scope.Global)
-def files(root_path: pathlib.Path = root) -> pathlib.Path:
-    return root_path.joinpath("tests", "files")
+        yield path

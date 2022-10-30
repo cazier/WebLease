@@ -1,16 +1,35 @@
 import typing as t
 import pathlib
 
-from ward import test, fixture
+from ward import Scope, test, fixture
 
-from tests.conftest import files
+from tests.conftest import tmpdir
 from weblease.loading.convert import csv_to_dict, fwf_to_dict
 
 T = t.TypeVar("T")
 
 
+@fixture(scope=Scope.Module)
+def _setup_teardown(path: pathlib.Path = tmpdir) -> pathlib.Path:
+    path.joinpath("input.csv").write_text(
+        """col1,col2,col3,col4,col5
+1,2,3,4,5
+"one","two","three","four","five"
+"one","two","three","four","five"
+"""
+    )
+    path.joinpath("input.fwf").write_text(
+        """   1   2    3           4    5
+one two three        four five
+one two three        four five
+"""
+    )
+
+    yield
+
+
 @fixture()
-def load(files_path: pathlib.Path = files) -> t.Callable[[str, int], str]:
+def load(files_path: pathlib.Path = tmpdir) -> t.Callable[[str, int], str]:
     def func(file: str, *nums: int) -> str:
         def get(_input: list[T], *nums: int) -> list[T]:
             return [e for i, e in enumerate(_input, start=1) if i in nums]
@@ -26,7 +45,7 @@ def load(files_path: pathlib.Path = files) -> t.Callable[[str, int], str]:
 
 
 @test("csv: generic load", tags=["csv"])
-def _(inputs=load):
+def _(inputs: t.Callable[[str, int], str] = load, _: None = _setup_teardown):
     data = inputs("csv", 2, 3)
 
     assert csv_to_dict(data) == [
@@ -36,7 +55,7 @@ def _(inputs=load):
 
 
 @test("csv: remove duplicates", tags=["csv"])
-def _(inputs=load):
+def _(inputs: t.Callable[[str, int], str] = load, _: None = _setup_teardown):
     data = inputs("csv", 2, 3, 4)
 
     assert csv_to_dict(data) == [
@@ -46,7 +65,7 @@ def _(inputs=load):
 
 
 @test("csv: rename columns", tags=["csv"])
-def _(inputs=load):
+def _(inputs: t.Callable[[str, int], str] = load, _: None = _setup_teardown):
     data = inputs("csv", 2, 3, 4)
     rename = {"col1": "col_a", "col2": "col_ii", "col3": "col333", "col4": "4col", "col5": "5"}
 
@@ -57,7 +76,7 @@ def _(inputs=load):
 
 
 @test("csv: drop columns", tags=["csv"])
-def _(inputs=load):
+def _(inputs: t.Callable[[str, int], str] = load, _: None = _setup_teardown):
     data = inputs("csv", 2, 3, 4)
     rename = {"col1": "col1", "col3": "col3", "col4": "col4", "col5": "col5"}
 
@@ -68,7 +87,7 @@ def _(inputs=load):
 
 
 @test("fwf: generic load", tags=["fwf"])
-def _(inputs=load):
+def _(inputs: t.Callable[[str, int], str] = load, _: None = _setup_teardown):
     data = inputs("fwf", 2, 3)
     width_keys = [("col1", 4), ("col2", 4), ("col3", 5), ("col4", 12), ("col5", 5)]
 
@@ -79,7 +98,7 @@ def _(inputs=load):
 
 
 @test("fwf: remove duplicates", tags=["fwf"])
-def _(inputs=load):
+def _(inputs: t.Callable[[str, int], str] = load, _: None = _setup_teardown):
     data = inputs("fwf", 2, 3, 4)
     width_keys = [("col1", 4), ("col2", 4), ("col3", 5), ("col4", 12), ("col5", 5)]
 
@@ -90,7 +109,7 @@ def _(inputs=load):
 
 
 @test("fwf: drop columns", tags=["fwf"])
-def _(inputs=load):
+def _(inputs: t.Callable[[str, int], str] = load, _: None = _setup_teardown):
     data = inputs("fwf", 2, 3, 4)
     width_keys = [("col1", 4), ("filler.1", 4), ("col3", 5), ("filler.2", 12), ("col5", 5)]
 
