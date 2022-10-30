@@ -28,6 +28,7 @@ repos:
         language: python
         types: [python]
         args: [--strict]
+        exclude: ^tests/
       - id: pylint
         name: pylint
         entry: pylint

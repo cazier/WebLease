@@ -11,6 +11,9 @@ include_trailing_comma = true
 show_error_codes = true
 show_error_context = true
 strict = true
+exclude = [
+    'tests/'
+]
 
 [tool.pylint."FORMAT"]
 max-line-length=100
