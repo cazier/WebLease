@@ -7,7 +7,7 @@ import pandas as pd
 
 def csv_to_dict(_input: str, rename: t.Optional[dict[str, str]] = None) -> list[dict[str, str]]:
     def keep_cols(key: str) -> bool:
-        return key in (rename or {})
+        return rename is None or key in rename
 
     df = pd.read_csv(StringIO(_input), usecols=keep_cols).replace({np.nan: None})
 
