@@ -1,6 +1,7 @@
 # WebLease
 tmp/
 storage/*
+cache/
 
 # Mac Stuff
 .DS_Store
