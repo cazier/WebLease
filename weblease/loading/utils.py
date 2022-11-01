@@ -1,16 +1,16 @@
-LSETAPE = [
+LSETAPE: list[tuple[str, int]] = [
     # Spec: https://www.data.boem.gov/Main/HtmlPage.aspx?page=leaseData
-    ("lease_number", 7),
+    ("number", 7),  # <---- KEY <SWITCH TO JUST NUMBER?>
     ("filler.1", 8),
     ("serial_type", 1),
     ("sale", 7),
     ("filler.2", 4),
-    ("exp", 8),  # TODO INVESTIGATE
+    ("expected_expiration", 8),
     ("county_code", 5),
     ("tract", 10),
-    ("eff", 8),  # TODO INVESTIGATE
+    ("effective", 8),
     ("term", 2),
-    ("exp2", 8),  # TODO INVESTIGATE
+    ("expiration", 8),
     ("bid_code", 5),
     ("royalty_rate", 10),
     ("filler.3", 3),
@@ -20,10 +20,10 @@ LSETAPE = [
     ("bid_amount", 13),
     ("bid_per_unit", 13),
     ("filler.4", 1),
-    ("low_water_depth", 5),
-    ("max_water_depty", 5),
+    ("low_depth", 5),
+    ("max_depth", 5),
     ("measure_flag", 1),
-    ("mms_planning_code", 3),
+    ("planning_code", 3),
     ("filler.5", 2),
     ("district_code", 2),
     ("filler.6", 3),
@@ -55,26 +55,30 @@ LSETAPE = [
     ("filler.11", 2),
 ]
 
-LSEOWND = [
+LSEOWND: list[tuple[str, int]] = [
     # Spec: https://www.data.boem.gov/Main/HtmlPage.aspx?page=leaseOwnerOper
-    ("lease_number", 7),
+    # NOTE: This has multiple instances of individual leases, because some of the leases are current
+    #       versus others that are terminated, etc.
+    ("number", 7),                # Equal: LSETAPE.lease_number
     ("assignment_approved", 8),
-    ("assignment_effective", 8),
+    ("assignment_effective", 8),  #
     ("assignment_status", 1),
     ("group", 1),
-    ("company_num", 5),
+    ("company_num", 5),           # mms_number
     ("percentage", 11),
     ("designation", 8),
-    ("operator_num", 5),
+    ("operator_num", 5),          # mms_number
 ]
 
-COMPALL = [
+COMPALL: list[tuple[str, int]] = [
     # Spec: https://www.data.boem.gov/Main/HtmlPage.aspx?page=companyAll
-    ("mms_number", 5),
+    # NOTE: Companies can be terminated and replaced by new ones with the same mms_number
+    #       For instance, mms_number 00056 WAS Phillips BECAME ConocoPhillips
+    ("number", 5),  # mms_number
     ("start", 8),
     ("name", 100),
     ("sort_name", 75),
-    ("terminated", 8),
+    ("termination", 8),
     ("region_pac", 1),
     ("region_gom", 1),
     ("region_alaska", 1),
@@ -83,6 +87,7 @@ COMPALL = [
     ("termination_effective", 8),
     ("termination_code", 1),
     ("division_name", 35),
+    # Multiple addresses are possible under one mms_number
     ("address_one", 35),
     ("address_two", 35),
     ("city", 35),
@@ -90,3 +95,35 @@ COMPALL = [
     ("zip_code", 20),
     ("country", 35),
 ]
+
+MV_LEASE_OWNERS_MAIN: list[tuple[str, str]] = [
+    # Spec: https://www.data.bsee.gov/Leasing/LeaseOwner/FieldDefinitions.aspx
+    # NOTE: This shares nothing with LSETAPE other than the lease_number
+    ("LEASE_NUMBER", "lease"),                     # Equal: LSETAPE.lease_number
+    ("MMS_COMPANY_NUM", "number"),                 # Equal: COMPALL.mms_number, LSEOWND.company_num
+    ("BUS_ASC_NAME", "name"),                      # Equal: COMPALL.name
+    ("MMS_STRT_DATE", "mms_start"),                # Equal: COMPALL.mms_start
+    ("ASGN_STATUS_CODE", "assignment_status"),     # LSEOWND.assignment_status (WILL ALWAYS BE C?)
+    ("OWNER_ALIQUOT_CD", "aliquot"),               # Equal: LSEOWND.group
+    ("SN_LSE_OWNER", "owner_sn"),                  #
+    ("ASSGN_APRV_DATE", "assignment_approved"),    # LSEOWND.assignment_approved
+    ("ASSGN_TERM_DATE", "assignment_terminated"),  #
+    # ("OWNER_GROUP_CODE", "group"),               # Equal: LSEOWND.group
+    ("ASSIGNMENT_PCT", "percentage"),              # LSEOWND.percentage
+    ("ASSGN_EFF_DATE", "assignment_effective"),    # LSEOWND.assignment_effective
+]
+
+MV_LEASE_OWNERS_MAIN_DICT: dict[str, str] = dict(MV_LEASE_OWNERS_MAIN)
+
+MV_LEASE_AREA_BLOCK: list[tuple[str, str]] = [
+    # Spec: https://www.data.boem.gov/Leasing/LeaseAreaBlock/FieldDefinitions.aspx
+    ("LEASE_NUMBER", "lease"),           # Equal: LSETAPE.lease_number
+    ("AREA_CODE", "area_code"),          # Equal: LSETAPE.area_code
+    ("BLOCK_NUM", "block"),              # Equal: LSETAPE.block_number
+    ("LEASE_STATUS_CD", "status"),       # Equal: LSETAPE.lease_status_code
+    ("LEASE_EFF_DATE", "effective"),     # Equal: LSETAPE.effective
+    ("LEASE_EXPIR_DATE", "expiration"),  # Equal: LSETAPE.expiration
+    ("BLK_MAX_WTR_DPTH", "depth"),       # NOT EQUAL: LSETAPE.low_water_depth/.max_water_depth
+]
+
+MV_LEASE_AREA_BLOCK_DICT: dict[str, str] = dict(MV_LEASE_AREA_BLOCK)
