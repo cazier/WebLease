@@ -7,15 +7,15 @@ from zipfile import ZipFile
 
 import httpx
 import respx
-from ward import Scope, test, raises, fixture
 from httpx import Response
+from ward import Scope, fixture, raises, test
 
-from tests.conftest import tmpdir
-from weblease.loading.download import get, extract
+from tests.conftest import make_data, tmpdir
+from weblease.loading.download import extract, fetch, get
 
 
 @fixture(scope=Scope.Module)
-def _setup_teardown(path: pathlib.Path = tmpdir) -> pathlib.Path:
+def _setup_teardown(path: pathlib.Path = tmpdir, _: None = make_data) -> pathlib.Path:
     with ZipFile(path.joinpath("empty.zip"), mode="w") as _:
         pass
 
@@ -23,6 +23,9 @@ def _setup_teardown(path: pathlib.Path = tmpdir) -> pathlib.Path:
         real_file = path.joinpath("textfile")
         real_file.write_text("text")
         file.write(real_file, real_file.relative_to(path))
+
+    with ZipFile(path.joinpath("data.zip"), mode="w") as file:
+        file.write(path.joinpath("input.csv"), real_file.relative_to(path))
 
     yield
 
@@ -36,6 +39,9 @@ def mocking(files_path: pathlib.Path = tmpdir):
 
         file = mock.get("not_empty.zip")
         file.return_value = Response(200, content=files_path.joinpath("not_empty.zip").read_bytes())
+
+        file = mock.get("data.zip")
+        file.return_value = Response(200, content=files_path.joinpath("data.zip").read_bytes())
 
         yield
 
@@ -75,3 +81,9 @@ def _(files_path: pathlib.Path = tmpdir, _: None = mocking, __: None = _setup_te
     response = get("https://example.com/not_empty.zip")
 
     assert files_path.joinpath("not_empty.zip").read_bytes() == response.read()
+
+
+@test("fetch", tags=["download"])
+def _(files_path: pathlib.Path = tmpdir, _: None = mocking, __: None = _setup_teardown) -> None:
+    data = fetch("https://example.com/data.zip")
+    assert data == files_path.joinpath("input.csv").read_text()
