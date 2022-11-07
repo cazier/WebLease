@@ -8,7 +8,15 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-def csv_to_dict(_in: str, rename: t.Optional[dict[str, str]] = None) -> list[dict[str, str]]:
+def csv_to_dict(_in: str, rename: t.Optional[dict[str, str]] = None) -> list[dict[t.Hashable, str]]:
+    return csv_to_df(_in=_in, rename=rename).to_dict(orient="records")
+
+
+def fwf_to_dict(_in: str, width_keys: list[tuple[str, int]]) -> list[dict[t.Hashable, str]]:
+    return fwf_to_df(_in=_in, width_keys=width_keys).to_dict(orient="records")
+
+
+def csv_to_df(_in: str, rename: t.Optional[dict[str, str]] = None) -> pd.DataFrame:
     logger.info("Loading %d lines of CSV data into a dictionary", len(_in.splitlines()))
 
     def keep_cols(key: str) -> bool:
@@ -26,10 +34,10 @@ def csv_to_dict(_in: str, rename: t.Optional[dict[str, str]] = None) -> list[dic
     logger.info("The resulting DataFrame has %d rows x %d columns", *df.shape)
     logger.debug("DataFrame description\n%s", df.describe())
 
-    return df.to_dict(orient="records")  # type: ignore[return-value]
+    return df
 
 
-def fwf_to_dict(_in: str, width_keys: list[tuple[str, int]]) -> list[dict[str, str]]:
+def fwf_to_df(_in: str, width_keys: list[tuple[str, int]]) -> pd.DataFrame:
     logger.info("Loading %d lines of fixed width data into a dictionary", len(_in.splitlines()))
 
     def keep_cols(key: str) -> bool:
@@ -52,4 +60,4 @@ def fwf_to_dict(_in: str, width_keys: list[tuple[str, int]]) -> list[dict[str, s
     logger.info("The resulting DataFrame has %d rows x %d columns", *df.shape)
     logger.debug("DataFrame description\n%s", df.describe())
 
-    return df.to_dict(orient="records")  # type: ignore[return-value]
+    return df
