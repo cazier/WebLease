@@ -4,11 +4,13 @@ import typing as t
 from tortoise import fields
 from tortoise.models import Model
 
+DATE_FORMATS = ("%m/%d/%y", "%Y%m%d", "%Y-%m-%d")
+
 
 class BseeDateField(fields.DateField):
     def to_python_value(self, value: t.Any) -> t.Optional[dt.date]:
         if value is not None and not isinstance(value, dt.date) and value != "":
-            out = dt.datetime.strptime(value, "%Y-%m-%d").date()
+            out = BseeDateField.parse_date(value)
 
         else:
             out = None
@@ -26,15 +28,14 @@ class BseeDateField(fields.DateField):
 
     @staticmethod
     def parse_date(value: str) -> dt.date:
-        try:
-            return dt.datetime.strptime(value, "%m/%d/%Y").date()
-
-        except ValueError:
+        for fmt in DATE_FORMATS:
             try:
-                return dt.datetime.strptime(value, "%Y%m%d").date()
+                return dt.datetime.strptime(value, fmt).date()
 
-            except ValueError as exception:
-                raise exception
+            except ValueError:
+                pass
+
+        raise ValueError(f"Could not find parse a date value from: {value}")
 
 
 class _Company:
