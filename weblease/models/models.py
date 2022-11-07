@@ -1,79 +1,21 @@
 import datetime as dt
-import typing as t
-from enum import Enum
 
 from tortoise import fields
 from tortoise.models import Model
 
-
-class BseeDateField(fields.DateField):
-    def to_python_value(self, value: t.Any) -> t.Optional[dt.date]:
-        if value is not None and not isinstance(value, dt.date) and value != "":
-            try:
-                out = dt.datetime.strptime(value, "%m/%d/%Y").date()
-            except ValueError:
-                try:
-                    out = dt.datetime.strptime(value, "%Y%m%d").date()
-                except ValueError as exception:
-                    raise exception
-
-        else:
-            out = None
-
-        self.validate(out)
-        return out
-
-    def to_db_value(
-        self, value: t.Optional[dt.date | str], instance: Model | t.Type[Model]
-    ) -> t.Optional[dt.date]:
-        if isinstance(value, str):
-            return super().to_db_value(BseeDateField.parse_date(value), instance)
-
-        return super().to_db_value(value, instance)
-
-    @staticmethod
-    def parse_date(value: str) -> dt.date:
-        try:
-            return dt.datetime.strptime(value, "%m/%d/%Y").date()
-
-        except ValueError:
-            try:
-                return dt.datetime.strptime(value, "%Y%m%d").date()
-
-            except ValueError as exception:
-                raise exception
+from weblease import loading
+from weblease.models.enum_types import *
+from weblease.models.field_types import BseeDateField, _Company
+from weblease.models.utils import FieldFinder
 
 
-class _Company:
-
-    # leases: fields.ReverseRelation["Lease"]
-
-    number: str = fields.CharField(max_length=10)
-    name: str = fields.TextField()
-
-
-class Company(_Company, Model):
+class Address(Model, FieldFinder):
     class Meta:
-        table = "companies"
+        table = "addresses"
+        unique_together = ("address_one", "address_two", "city", "state", "zip_code", "country")
 
-    class TerminationCode(str, Enum):
-        CHANGE_OF_NAME = "C"
-        MERGER = "M"
-        OTHER = "O"
+    __skip_annotations__: list[str] = ["__skip_annotations__", "companies"]
 
-    start: dt.date = BseeDateField()
-    sort_name: str = fields.CharField(max_length=75, null=True)
-    termination: dt.date = BseeDateField(null=True)
-    region_pac: str = fields.CharField(max_length=1, null=True)
-    region_gom: str = fields.CharField(max_length=1, null=True)
-    region_alaska: str = fields.CharField(max_length=1, null=True)
-    region_atl: str = fields.CharField(max_length=1, null=True)
-    duns: str = fields.CharField(max_length=13, unique=True, null=True)
-    termination_effective: dt.date = BseeDateField(null=True)
-    termination_code: TerminationCode = fields.CharEnumField(
-        TerminationCode, max_length=1, null=True
-    )
-    division_name: str = fields.CharField(max_length=13, null=True)
     address_one: str = fields.CharField(max_length=35, null=True)
     address_two: str = fields.CharField(max_length=35, null=True)
     city: str = fields.CharField(max_length=35, null=True)
@@ -81,72 +23,93 @@ class Company(_Company, Model):
     zip_code: str = fields.CharField(max_length=20, null=True)
     country: str = fields.CharField(max_length=35, null=True)
 
+    companies: fields.ManyToManyRelation["Company"] = fields.ManyToManyField(
+        "models.Company", related_name="address"
+    )
+
+
+class Company(_Company, Model):
+    class Meta:
+        table = "companies"
+        url = "https://www.data.bsee.gov/Company/Files/compallfixed.zip"
+        file = "compallfixed.txt"
+        util = loading.COMPALL
+        method = loading.fwf_to_dict
+
+    start: dt.date = BseeDateField()
+    # This max length is overridden to 100 in case the sort length is copied from the original name
+    sort_name: str = fields.CharField(max_length=100, null=True)
+    termination: dt.date = BseeDateField(null=True)
+    region_pac: str = fields.CharField(max_length=1, null=True)  # Potential Enumeration
+    region_gom: str = fields.CharField(max_length=1, null=True)  # Potential Enumeration
+    region_alaska: str = fields.CharField(max_length=1, null=True)  # Potential Enumeration
+    region_atl: str = fields.CharField(max_length=1, null=True)  # Potential Enumeration
+    duns: str = fields.CharField(max_length=13, unique=True, null=True)
+    termination_effective: dt.date = BseeDateField(null=True)
+    termination_code: TerminationCode = fields.CharEnumField(
+        TerminationCode, max_length=1, null=True
+    )
+    division_name: str = fields.CharField(max_length=13, null=True)
+
+    def __init__(self, **kwargs: dict[str, str]) -> None:
+        if kwargs.get("sort_name") is None:
+            kwargs["sort_name"] = kwargs["name"]
+        super().__init__(**kwargs)
+
 
 # class Operator(_Company):
 #     class Meta:
 #         table = "operators"
 
 
-# class Lease(Model):
-#     class Meta:
-#         table = "leases"
-
-#     class Status(str, Enum):
-#         CURRENT = "C"
-#         HISTORIC = "H"
-#         PENDING = "P"
-#         TERMINATED = "T"
-
-#     blocks: fields.ReverseRelation["Block"]
-
-#     lease_number: str = fields.CharField(max_length=20)
-#     aliquot: str = fields.CharField(max_length=1)
-#     status: Status = fields.CharEnumField(Status, max_length=1)
-#     start: dt.date = BseeDateField(null=True)
-#     approved: dt.date = BseeDateField()
-#     effective: dt.date = BseeDateField()
-#     terminated: dt.date = BseeDateField(null=True)
-#     group: str = fields.CharField(max_length=1, null=True)
-#     percentage: float = fields.FloatField(null=True)
-#     owner: str = fields.CharField(max_length=50)
-#     company: fields.ForeignKeyRelation[Company] = fields.ForeignKeyField(
-#         "models.Company", related_name="leases"
-#     )
-#     operator: fields.ForeignKeyRelation[Operator] = fields.ForeignKeyField(
-#         "models.Operator", related_name="leases"
-#     )
-
-
-class Block(Model):
+class Lease(Model):
     class Meta:
-        table = "blocks"
+        table = "leases"
+        url = "https://www.data.bsee.gov/Leasing/Files/lsetapefixed.zip"
+        file = "lsetape.dat"
+        util = loading.LSETAPE
+        method = loading.fwf_to_dict
 
-    class Status(str, Enum):
-        CANCEL = "CANCEL"
-        CONSOL = "CONSOL"
-        DSO = "DSO"
-        EXPIR = "EXPIR"
-        NO_EXE = "NO-EXE"
-        NO_ISS = "NO-ISS"
-        OPERNS = "OPERNS"
-        PRIMRY = "PRIMRY"
-        PROD = "PROD"
-        REJECT = "REJECT"
-        RELINQ = "RELINQ"
-        SOO = "SOO"
-        SOP = "SOP"
-        TERMIN = "TERMIN"
-        UNIT = "UNIT"
-
-    lease: str = fields.CharField(max_length=6)
-    block: str = fields.TextField()
-    area_code: str = fields.CharField(max_length=6)
-    # https://www.data.boem.gov/Leasing/LeaseAreaBlock/FieldValues.aspx?domain=0059
+    number: str = fields.CharField(max_length=20, unique=True)
+    serial_type: SerialType = fields.CharEnumField(SerialType, max_length=1)
+    sale: str = fields.CharField(max_length=7, null=True)
+    expected_expiration: dt.date = BseeDateField(null=True)
+    county: str = fields.CharField(max_length=5)
+    tract: str = fields.CharField(max_length=10, null=True)
     effective: dt.date = BseeDateField(null=True)
+    term: int = fields.IntField(null=True)
     expiration: dt.date = BseeDateField(null=True)
-    depth: int = fields.IntField()
-    status: Status = fields.CharEnumField(Status, max_length=10)
-    # https://www.data.boem.gov/Leasing/LeaseAreaBlock/FieldValues.aspx?domain=LEASE_STATUS_CDS
-    # lease: fields.ForeignKeyRelation[Lease] = fields.ForeignKeyField(
-    #     "models.Lease", related_name="blocks"
-    # )
+    bid_code: str = fields.CharField(max_length=5, null=True)  # Potential Enumeration
+    royalty_rate: float = fields.FloatField(null=True)
+    initial_area: float = fields.FloatField()
+    current_area: float = fields.FloatField(null=True)
+    rent_per_unit: float = fields.FloatField()
+    bid_amount: float = fields.FloatField(null=True)
+    bid_per_unit: float = fields.FloatField(null=True)
+    low_depth: int = fields.IntField(null=True)
+    max_depth: int = fields.IntField(null=True)
+    measure_flag: SystemMeasureFlag = fields.CharEnumField(SystemMeasureFlag, max_length=1)
+    planning_code: str = fields.CharField(max_length=3, null=True)  # Potential Enumeration
+    district_code: int = fields.IntField()
+    lease_status_code: LeaseStatus = fields.CharEnumField(LeaseStatus, max_length=6)
+    lease_status_effective: dt.date = BseeDateField(null=True)
+    suspension_expiration: dt.date = BseeDateField(null=True)
+    # Potential Enumeration, but BSEE page has the length as one char, when the values can be two?
+    suspension_type: str = fields.CharField(max_length=1, null=True)
+    well_name: str = fields.CharField(max_length=6, null=True)
+    well_type: WellTypes = fields.CharEnumField(WellTypes, max_length=1, null=True)
+    lease_qualifying: dt.date = BseeDateField(null=True)
+    discovery_type: str = fields.CharField(max_length=3, null=True)
+    field_discover_code: FieldCode = fields.CharEnumField(FieldCode, max_length=1, null=True)
+    distance_to_shore: str = fields.CharField(max_length=3, null=True)
+    num_platforms: int = fields.IntField(null=True)
+    platform_approval: dt.date = BseeDateField(null=True)
+    first_platform_set: dt.date = BseeDateField(null=True)
+    lease_section: LeaseSection = fields.CharEnumField(LeaseSection, max_length=2, null=True)
+    postal_state: str = fields.CharField(max_length=4, null=True)
+    lease_area: float = fields.FloatField(null=True)
+    protraction: str = fields.CharField(max_length=7)
+    suspension_effective: dt.date = BseeDateField(null=True)
+    first_production: dt.date = BseeDateField(null=True)
+    area_code: str = fields.CharField(max_length=2)  # Potential Enumeration
+    block_number: str = fields.CharField(max_length=6)
