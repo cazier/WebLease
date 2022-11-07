@@ -1,4 +1,4 @@
-from .convert import csv_to_dict, fwf_to_dict
+from .convert import csv_to_df, csv_to_dict, fwf_to_df, fwf_to_dict
 from .download import fetch
 from .utils import (
     COMPALL,

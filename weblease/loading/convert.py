@@ -8,7 +8,7 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-def csv_to_dict(_in: str, rename: t.Optional[dict[str, str]] = None) -> list[dict[t.Hashable, str]]:
+def csv_to_dict(_in: str, rename: dict[str, str]) -> list[dict[t.Hashable, str]]:
     return csv_to_df(_in=_in, rename=rename).to_dict(orient="records")
 
 
@@ -16,20 +16,22 @@ def fwf_to_dict(_in: str, width_keys: list[tuple[str, int]]) -> list[dict[t.Hash
     return fwf_to_df(_in=_in, width_keys=width_keys).to_dict(orient="records")
 
 
-def csv_to_df(_in: str, rename: t.Optional[dict[str, str]] = None) -> pd.DataFrame:
+def csv_to_df(_in: str, rename: dict[str, str]) -> pd.DataFrame:
     logger.info("Loading %d lines of CSV data into a dictionary", len(_in.splitlines()))
 
     def keep_cols(key: str) -> bool:
-        return rename is None or key in rename
+        return key in rename
 
     df = (
-        pd.read_csv(StringIO(_in), usecols=keep_cols, dtype=str)
+        pd.read_csv(
+            StringIO(_in),
+            usecols=keep_cols,
+            converters={n: lambda k: k.strip() for n in rename.keys()},
+        )
         .replace({np.nan: None})
         .drop_duplicates()
+        .rename(columns=rename)
     )
-
-    if rename:
-        df = df.rename(columns=rename)
 
     logger.info("The resulting DataFrame has %d rows x %d columns", *df.shape)
     logger.debug("DataFrame description\n%s", df.describe())
