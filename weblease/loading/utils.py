@@ -1,12 +1,12 @@
 LSETAPE: list[tuple[str, int]] = [
     # Spec: https://www.data.boem.gov/Main/HtmlPage.aspx?page=leaseData
-    ("number", 7),  # <---- KEY <SWITCH TO JUST NUMBER?>
+    ("number", 7),  # UNIQUE FIELD
     ("filler.1", 8),
     ("serial_type", 1),
     ("sale", 7),
     ("filler.2", 4),
     ("expected_expiration", 8),
-    ("county_code", 5),
+    ("county", 5),
     ("tract", 10),
     ("effective", 8),
     ("term", 2),
