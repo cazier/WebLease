@@ -4,7 +4,7 @@ import typing as t
 from tortoise import fields
 from tortoise.models import Model
 
-DATE_FORMATS = ("%m/%d/%y", "%Y%m%d", "%Y-%m-%d")
+DATE_FORMATS = ("%m/%d/%Y", "%Y%m%d", "%Y-%m-%d")
 
 
 class BseeDateField(fields.DateField):
