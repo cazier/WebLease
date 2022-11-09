@@ -8,12 +8,12 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-def csv_to_dict(_in: str, rename: dict[str, str]) -> list[dict[t.Hashable, str]]:
-    return csv_to_df(_in=_in, rename=rename).to_dict(orient="records")
+def csv_to_dict(_in: str, rename: dict[str, str]) -> list[dict[str, str]]:
+    return csv_to_df(_in, rename).to_dict(orient="records")  # type: ignore[return-value]
 
 
-def fwf_to_dict(_in: str, width_keys: list[tuple[str, int]]) -> list[dict[t.Hashable, str]]:
-    return fwf_to_df(_in=_in, width_keys=width_keys).to_dict(orient="records")
+def fwf_to_dict(_in: str, width_keys: list[tuple[str, int]]) -> list[dict[str, str]]:
+    return fwf_to_df(_in, width_keys).to_dict(orient="records")  # type: ignore[return-value]
 
 
 def csv_to_df(_in: str, rename: dict[str, str]) -> pd.DataFrame:

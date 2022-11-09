@@ -38,6 +38,6 @@ class BseeDateField(fields.DateField):
         raise ValueError(f"Could not find parse a date value from: {value}")
 
 
-class _Company:
+class BaseCompany:
     number: str = fields.CharField(max_length=10)
     name: str = fields.CharField(max_length=100)

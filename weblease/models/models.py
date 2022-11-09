@@ -3,9 +3,16 @@ import datetime as dt
 from tortoise import fields
 from tortoise.models import Model
 
-from weblease import loading
-from weblease.models.enum_types import *
-from weblease.models.field_types import BseeDateField, _Company
+from weblease.models.enum_types import (
+    FieldCode,
+    LeaseSection,
+    LeaseStatus,
+    SerialType,
+    SystemMeasureFlag,
+    TerminationCode,
+    WellTypes,
+)
+from weblease.models.field_types import BaseCompany, BseeDateField
 from weblease.models.utils import FieldFinder
 
 
@@ -28,13 +35,9 @@ class Address(Model, FieldFinder):
     )
 
 
-class Company(_Company, Model):
+class Company(BaseCompany, Model):
     class Meta:
         table = "companies"
-        url = "https://www.data.bsee.gov/Company/Files/compallfixed.zip"
-        file = "compallfixed.txt"
-        util = loading.COMPALL
-        method = loading.fwf_to_dict
 
     start: dt.date = BseeDateField()
     # This max length is overridden to 100 in case the sort length is copied from the original name
@@ -57,18 +60,9 @@ class Company(_Company, Model):
         super().__init__(**kwargs)
 
 
-# class Operator(_Company):
-#     class Meta:
-#         table = "operators"
-
-
 class Lease(Model):
     class Meta:
         table = "leases"
-        url = "https://www.data.bsee.gov/Leasing/Files/lsetapefixed.zip"
-        file = "lsetape.dat"
-        util = loading.LSETAPE
-        method = loading.fwf_to_dict
 
     number: str = fields.CharField(max_length=20, unique=True)
     serial_type: SerialType = fields.CharEnumField(SerialType, max_length=1)
@@ -113,3 +107,19 @@ class Lease(Model):
     first_production: dt.date = BseeDateField(null=True)
     area_code: str = fields.CharField(max_length=2)  # Potential Enumeration
     block_number: str = fields.CharField(max_length=6)
+
+
+class Block(Model):
+    class Meta:
+        table = "blocks"
+
+    lease: fields.ForeignKeyRelation[Lease] = fields.ForeignKeyField(
+        "models.Lease", related_name="leases"
+    )
+
+    area_code: str = fields.CharField(max_length=6)
+    number: str = fields.CharField(max_length=18)
+    status: LeaseStatus = fields.CharEnumField(LeaseStatus, max_length=6)
+    effective: dt.date = BseeDateField(null=True)
+    expiration: dt.date = BseeDateField(null=True)
+    depth: int = fields.IntField()

@@ -119,7 +119,7 @@ MV_LEASE_AREA_BLOCK: list[tuple[str, str]] = [
     # Spec: https://www.data.boem.gov/Leasing/LeaseAreaBlock/FieldDefinitions.aspx
     ("LEASE_NUMBER", "lease"),           # Equal: LSETAPE.lease_number
     ("AREA_CODE", "area_code"),          # Equal: LSETAPE.area_code
-    ("BLOCK_NUM", "block"),              # Equal: LSETAPE.block_number
+    ("BLOCK_NUM", "number"),             # Equal: LSETAPE.block_number
     ("LEASE_STATUS_CD", "status"),       # Equal: LSETAPE.lease_status_code
     ("LEASE_EFF_DATE", "effective"),     # Equal: LSETAPE.effective
     ("LEASE_EXPIR_DATE", "expiration"),  # Equal: LSETAPE.expiration
@@ -127,3 +127,7 @@ MV_LEASE_AREA_BLOCK: list[tuple[str, str]] = [
 ]
 
 MV_LEASE_AREA_BLOCK_DICT: dict[str, str] = dict(MV_LEASE_AREA_BLOCK)
+
+LSETAPE_URL = "https://www.data.bsee.gov/Leasing/Files/lsetapefixed.zip"
+COMPALL_URL = "https://www.data.bsee.gov/Company/Files/compallfixed.zip"
+MV_LEASE_AREA_BLOCK_URL = "https://www.data.boem.gov/Leasing/Files/LABRawData.zip"
