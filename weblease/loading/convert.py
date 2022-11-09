@@ -26,7 +26,7 @@ def csv_to_df(_in: str, rename: dict[str, str]) -> pd.DataFrame:
         pd.read_csv(
             StringIO(_in),
             usecols=keep_cols,
-            converters={n: lambda k: k.strip() for n in rename.keys()},
+            converters={n: _strip for n in rename.keys()},
         )
         .replace({np.nan: None})
         .drop_duplicates()
@@ -53,7 +53,7 @@ def fwf_to_df(_in: str, width_keys: list[tuple[str, int]]) -> pd.DataFrame:
             widths=widths,
             names=names,
             usecols=keep_cols,
-            converters={n: str for n in names},
+            converters={n: _strip for n in names},
         )
         .replace({np.nan: None})
         .drop_duplicates()
@@ -63,3 +63,22 @@ def fwf_to_df(_in: str, width_keys: list[tuple[str, int]]) -> pd.DataFrame:
     logger.debug("DataFrame description\n%s", df.describe())
 
     return df
+
+
+def _strip(value: str) -> t.Optional[str]:
+    """Helper function to clean values from input data. Strip away any whitespace from the front or
+    end of the input string value. If the result is an empty string, return ``None``. Otherwise,
+    return the string
+
+    Args:
+        value (str): the dirty input value
+
+    Returns:
+        t.Optional[str]: the cleaned/stripped value, or ``None``
+    """
+    value = value.strip()
+
+    if value == "":
+        return None
+
+    return value
