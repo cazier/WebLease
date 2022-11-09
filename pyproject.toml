@@ -21,6 +21,8 @@ omit = [
 show_error_codes = true
 show_error_context = true
 strict = true
+explicit_package_bases = true
+namespace_packages = true
 exclude = [
     'tests/'
 ]
@@ -49,6 +51,7 @@ description = ""
 authors = ["Brendan Cazier <520246+cazier@users.noreply.github.com>"]
 license = "GPL"
 readme = "README.md"
+packages = [{include = "weblease"}]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.11"
