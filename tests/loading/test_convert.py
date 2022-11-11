@@ -28,8 +28,9 @@ def load(files_path: pathlib.Path = tmpdir) -> t.Callable[[str, int], str]:
 @test("csv: generic load", tags=["csv"])
 def _(inputs: t.Callable[[str, int], str] = load, _: None = make_data):
     data = inputs("csv", 2, 3)
+    rename = {"col1": "col1", "col2": "col2", "col3": "col3", "col4": "col4", "col5": "col5"}
 
-    assert csv_to_dict(data) == [
+    assert csv_to_dict(data, rename) == [
         {"col1": "1", "col2": "2", "col3": "3", "col4": "4", "col5": "5"},
         {"col1": "one", "col2": "two", "col3": "three", "col4": "four", "col5": "five"},
     ]
@@ -38,8 +39,9 @@ def _(inputs: t.Callable[[str, int], str] = load, _: None = make_data):
 @test("csv: remove duplicates", tags=["csv"])
 def _(inputs: t.Callable[[str, int], str] = load, _: None = make_data):
     data = inputs("csv", 2, 3, 4)
+    rename = {"col1": "col1", "col2": "col2", "col3": "col3", "col4": "col4", "col5": "col5"}
 
-    assert csv_to_dict(data) == [
+    assert csv_to_dict(data, rename) == [
         {"col1": "1", "col2": "2", "col3": "3", "col4": "4", "col5": "5"},
         {"col1": "one", "col2": "two", "col3": "three", "col4": "four", "col5": "five"},
     ]
