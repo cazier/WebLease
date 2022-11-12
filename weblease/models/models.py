@@ -4,6 +4,7 @@ from tortoise import fields
 from tortoise.models import Model
 
 from weblease.models.enum_types import (
+    AssignmentStatus,
     FieldCode,
     LeaseSection,
     LeaseStatus,
@@ -38,6 +39,8 @@ class Address(Model, FieldFinder):
 class Company(BaseCompany, Model):
     class Meta:
         table = "companies"
+
+    address: fields.ManyToManyRelation[Address]
 
     start: dt.date = BseeDateField()
     # This max length is overridden to 100 in case the sort length is copied from the original name
@@ -108,13 +111,18 @@ class Lease(Model):
     area_code: str = fields.CharField(max_length=2)  # Potential Enumeration
     block_number: str = fields.CharField(max_length=6)
 
+    # Ownership Information
+    # owners: fields.ManyToManyRelation["Owner"] = fields.ManyToManyField(
+    #     "models.Owner", related_name="lease"
+    # )
+
 
 class Block(Model):
     class Meta:
         table = "blocks"
 
     lease: fields.ForeignKeyRelation[Lease] = fields.ForeignKeyField(
-        "models.Lease", related_name="leases"
+        "models.Lease", related_name="blocks"
     )
 
     area_code: str = fields.CharField(max_length=6)
@@ -123,3 +131,25 @@ class Block(Model):
     effective: dt.date = BseeDateField(null=True)
     expiration: dt.date = BseeDateField(null=True)
     depth: int = fields.IntField()
+
+
+class Owner(Model):
+    class Meta:
+        table = "owners"
+        unique_together = ("lease", "company", "aliquot")
+
+    lease: fields.ForeignKeyRelation[Lease] = fields.ForeignKeyField(
+        "models.Lease", related_name="owners"
+    )
+    company: fields.ForeignKeyRelation[Company] = fields.ForeignKeyField(
+        "models.Company", related_name="owners"
+    )
+
+    start: dt.date = BseeDateField(null=True)
+    status: AssignmentStatus = fields.CharEnumField(AssignmentStatus, max_length=1)
+    aliquot: str = fields.CharField(max_length=3)
+    serial: str = fields.CharField(max_length=22)
+    approval: dt.date = BseeDateField()
+    termination: dt.date = BseeDateField(null=True)
+    percentage: float = fields.FloatField()
+    effective: dt.date = BseeDateField()

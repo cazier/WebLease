@@ -96,24 +96,24 @@ COMPALL: list[tuple[str, int]] = [
     ("country", 35),
 ]
 
-MV_LEASE_OWNERS_MAIN: list[tuple[str, str]] = [
+MV_LEASE_OWNERS: list[tuple[str, str]] = [
     # Spec: https://www.data.bsee.gov/Leasing/LeaseOwner/FieldDefinitions.aspx
     # NOTE: This shares nothing with LSETAPE other than the lease_number
-    ("LEASE_NUMBER", "lease"),                     # Equal: LSETAPE.lease_number
-    ("MMS_COMPANY_NUM", "number"),                 # Equal: COMPALL.mms_number, LSEOWND.company_num
-    ("BUS_ASC_NAME", "name"),                      # Equal: COMPALL.name
-    ("MMS_STRT_DATE", "mms_start"),                # Equal: COMPALL.mms_start
-    ("ASGN_STATUS_CODE", "assignment_status"),     # LSEOWND.assignment_status (WILL ALWAYS BE C?)
-    ("OWNER_ALIQUOT_CD", "aliquot"),               # Equal: LSEOWND.group
-    ("SN_LSE_OWNER", "owner_sn"),                  #
-    ("ASSGN_APRV_DATE", "assignment_approved"),    # LSEOWND.assignment_approved
-    ("ASSGN_TERM_DATE", "assignment_terminated"),  #
-    # ("OWNER_GROUP_CODE", "group"),               # Equal: LSEOWND.group
-    ("ASSIGNMENT_PCT", "percentage"),              # LSEOWND.percentage
-    ("ASSGN_EFF_DATE", "assignment_effective"),    # LSEOWND.assignment_effective
+    ("LEASE_NUMBER", "lease"),           # Equal: LSETAPE.lease_number
+    ("MMS_COMPANY_NUM", "number"),       # Equal: COMPALL.mms_number, LSEOWND.company_num
+    # ("BUS_ASC_NAME", "name"),          # Equal: COMPALL.name
+    ("MMS_STRT_DATE", "start"),          # Equal: COMPALL.mms_start
+    ("ASGN_STATUS_CODE", "status"),      # LSEOWND.assignment_status (WILL ALWAYS BE C?)
+    ("OWNER_ALIQUOT_CD", "aliquot"),     # Equal: LSEOWND.group
+    ("SN_LSE_OWNER", "serial"),          #
+    ("ASSGN_APRV_DATE", "approval"),     # LSEOWND.assignment_approved
+    ("ASSGN_TERM_DATE", "termination"),  #
+    # ("OWNER_GROUP_CODE", "group"),     # Equal: LSEOWND.group
+    ("ASSIGNMENT_PCT", "percentage"),    # LSEOWND.percentage
+    ("ASSGN_EFF_DATE", "effective"),     # LSEOWND.assignment_effective
 ]
 
-MV_LEASE_OWNERS_MAIN_DICT: dict[str, str] = dict(MV_LEASE_OWNERS_MAIN)
+MV_LEASE_OWNERS_DICT: dict[str, str] = dict(MV_LEASE_OWNERS)
 
 MV_LEASE_AREA_BLOCK: list[tuple[str, str]] = [
     # Spec: https://www.data.boem.gov/Leasing/LeaseAreaBlock/FieldDefinitions.aspx
@@ -131,3 +131,4 @@ MV_LEASE_AREA_BLOCK_DICT: dict[str, str] = dict(MV_LEASE_AREA_BLOCK)
 LSETAPE_URL = "https://www.data.bsee.gov/Leasing/Files/lsetapefixed.zip"
 COMPALL_URL = "https://www.data.bsee.gov/Company/Files/compallfixed.zip"
 MV_LEASE_AREA_BLOCK_URL = "https://www.data.boem.gov/Leasing/Files/LABRawData.zip"
+MV_LEASE_OWNERS_URL = 'https://www.data.bsee.gov/Leasing/Files/LeaseOwnerRawData.zip'

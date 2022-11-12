@@ -1,12 +1,15 @@
+import datetime as dt
 import logging
 import pprint
 
 from rich.progress import track
 from tortoise import run_async
+from tortoise.exceptions import MultipleObjectsReturned
 
 from weblease import loading
 from weblease.loading import csv_to_dict, fetch, fwf_to_dict
-from weblease.models.models import Address, Block, Company, Lease
+from weblease.models.models import Address, Block, Company, Lease, Owner
+from weblease.models.utils import parse_date
 from weblease.storage import init as init_db
 
 logger = logging.getLogger(__name__)
@@ -42,11 +45,40 @@ async def load_blocks() -> None:
         _, _ = await Block.get_or_create(defaults=None, using_db=None, **block, lease=lease)
 
 
+async def load_owners() -> None:
+    owners = csv_to_dict(fetch(loading.MV_LEASE_OWNERS_URL), loading.MV_LEASE_OWNERS_DICT)
+
+    for owner in track(owners):
+        lease = await Lease.get(number=owner.pop("lease"))
+
+        keys = ("", "termination_effective", "termination")
+        search: dict[str, str | dt.date | None] = {"number": owner.pop("number")}
+
+        if start := owner.get("start"):
+            search["start"] = parse_date(start)
+
+        for key in keys:
+            if key:
+                search[key] = None
+
+            try:
+                company = await Company.get(defaults=None, using_db=None, **search)
+                break
+
+            except MultipleObjectsReturned:
+                pass
+
+        _, _ = await Owner.get_or_create(
+            defaults=None, using_db=None, **owner, lease=lease, company=company
+        )
+
+
 async def main() -> None:
     await init_db()
     await load_leases()
     await load_blocks()
     await load_companies()
+    await load_owners()
 
 
 if __name__ == "__main__":
