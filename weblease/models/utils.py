@@ -59,6 +59,8 @@ def parse_date(value: t.Optional[str]) -> t.Optional[datetime.date]:
     if value is None:
         return None
 
+    value = str(value)
+
     for fmt in DATE_FORMATS:
         try:
             return datetime.datetime.strptime(value, fmt).date()
@@ -66,4 +68,4 @@ def parse_date(value: t.Optional[str]) -> t.Optional[datetime.date]:
         except ValueError:
             pass
 
-    raise ValueError(f"Could not find parse a date value from: {value}")
+    raise ValueError(f"Could not parse a date value from: {value}")

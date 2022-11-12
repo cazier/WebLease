@@ -1,5 +1,3 @@
-# type: ignore
-
 import pathlib
 import warnings
 from io import BytesIO
