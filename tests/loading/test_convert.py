@@ -4,7 +4,7 @@ import typing as t
 from ward import fixture, test
 
 from tests.conftest import make_data, tmpdir
-from weblease.loading.convert import csv_to_dict, fwf_to_dict
+from weblease.loading.convert import _strip, csv_to_dict, fwf_to_dict
 
 T = t.TypeVar("T")
 
@@ -100,3 +100,12 @@ def _(inputs: t.Callable[[str, int], str] = load, _: None = make_data):
         {"col1": "1", "col3": "3", "col5": "5"},
         {"col1": "one", "col3": "three", "col5": "five"},
     ]
+
+
+@test("strip", tags=["utility"])
+def _():
+    assert _strip("valid") == "valid"
+    assert _strip("\n\tvalid\n\r\r\n") == "valid"
+    assert _strip(12) == "12"
+
+    assert _strip("\n\n\n\n") is None

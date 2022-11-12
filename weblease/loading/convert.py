@@ -76,7 +76,7 @@ def _strip(value: str) -> t.Optional[str]:
     Returns:
         t.Optional[str]: the cleaned/stripped value, or ``None``
     """
-    value = value.strip()
+    value = str(value).strip()
 
     if value == "":
         return None
